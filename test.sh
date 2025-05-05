@@ -3,13 +3,37 @@
 # WORK IN PROGRESS!
 
 # Path to the minishell executable to test
-MINISHELL_PATH="/home/dlippelt/codam/github/dplippelt/projects/minishell"
+MINISHELL_FOLDER="/home/dlippelt/codam/github/dplippelt/projects/minishell"
+TEST_FOLDER="$PWD"
 OUTPUT_FILE="/tmp/minishell_test_output"
 
-make -s -C $MINISHELL_PATH
+cd $MINISHELL_FOLDER
+
+make -s
 
 # Function to run a simple ls test
 minishell_test()
+{
+	start_tmux_session
+
+	run_minishell_command "ls"
+
+	# Capture the output from the tmux pane and trim empty lines
+	tmux capture-pane -p -t "$session_name" | awk 'NF{p=1} p' > "$OUTPUT_FILE"
+
+	# Display the output (for debugging)
+	echo "=== Minishell test output ==="
+	cat "$OUTPUT_FILE"
+	echo "=================================="
+
+	# Kill the tmux session
+	tmux kill-session -t "$session_name"
+
+	# Clean up
+	rm -f "$OUTPUT_FILE"
+}
+
+start_tmux_session()
 {
 	local session_name="minishell_test_$$"
 
@@ -38,11 +62,14 @@ minishell_test()
 
 	echo "Starting minishell in tmux session..."
 	# Start minishell in the tmux session
-	tmux send-keys -t "$session_name" "$MINISHELL_PATH/minishell" C-m
+	tmux send-keys -t "$session_name" "./minishell" C-m
 	sleep 1  # Wait for minishell to start
+}
 
+run_minishell_command()
+{
 	# Send 'ls' command to minishell
-	tmux send-keys -t "$session_name" "ls" C-m
+	tmux send-keys -t "$session_name" "$1" C-m
 	sleep 0.2  # Wait for command to execute
 
 	# Send 'echo $?' command to minishell
@@ -51,26 +78,13 @@ minishell_test()
 	# Send exit command
 	tmux send-keys -t "$session_name" "exit" C-m
 	sleep 0.2
-
-	# Capture the output from the tmux pane and trim empty lines
-	tmux capture-pane -p -t "$session_name" | awk 'NF{p=1} p' > "$OUTPUT_FILE"
-
-	# Display the output (for debugging)
-	echo "=== Minishell 'ls' test output ==="
-	cat "$OUTPUT_FILE"
-	echo "=================================="
-
-	#
-
-	# Kill the tmux session
-	tmux kill-session -t "$session_name"
-
-	# Clean up
-	rm -f "$OUTPUT_FILE"
 }
 
 minishell_test
 
-# make -C $MINISHELL_PATH fclean
+cd $MINISHELL_FOLDER
+# make -s fclean
+cd $TEST_FOLDER
+
 
 exit 0
