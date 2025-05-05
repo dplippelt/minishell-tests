@@ -6,6 +6,8 @@
 MINISHELL_PATH="/home/dlippelt/codam/github/dplippelt/projects/minishell"
 OUTPUT_FILE="/tmp/minishell_test_output"
 
+make -s -C $MINISHELL_PATH
+
 # Function to run a simple ls test
 minishell_test()
 {
@@ -26,12 +28,6 @@ minishell_test()
 		tmux start-server
 	fi
 
-	# Check if minishell executable exists
-	if [ ! -x "$MINISHELL_PATH/minishell" ]; then
-		echo "Error: $MINISHELL_PATH/minishell is not executable or does not exist."
-		return 1
-	fi
-
 	echo "Creating tmux session: $session_name"
 	# Create a new tmux session in detached mode
 	tmux new-session -d -s "$session_name"
@@ -49,6 +45,9 @@ minishell_test()
 	tmux send-keys -t "$session_name" "ls" C-m
 	sleep 0.2  # Wait for command to execute
 
+	# Send 'echo $?' command to minishell
+	tmux send-keys -t "$session_name" "echo \$?" C-m
+
 	# Send exit command
 	tmux send-keys -t "$session_name" "exit" C-m
 	sleep 0.2
@@ -56,18 +55,22 @@ minishell_test()
 	# Capture the output from the tmux pane and trim empty lines
 	tmux capture-pane -p -t "$session_name" | awk 'NF{p=1} p' > "$OUTPUT_FILE"
 
-	# Kill the tmux session
-	tmux kill-session -t "$session_name"
-
-	# Display the output
+	# Display the output (for debugging)
 	echo "=== Minishell 'ls' test output ==="
 	cat "$OUTPUT_FILE"
 	echo "=================================="
+
+	#
+
+	# Kill the tmux session
+	tmux kill-session -t "$session_name"
 
 	# Clean up
 	rm -f "$OUTPUT_FILE"
 }
 
 minishell_test
+
+# make -C $MINISHELL_PATH fclean
 
 exit 0
